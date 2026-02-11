@@ -2159,6 +2159,18 @@ def create_item(
             except json.JSONDecodeError:
                 return f"Error: creators must be a JSON list of dicts, got: {creators}"
 
+        # Validate creators structure after parsing (or if passed as a Python object)
+        if creators is not None:
+            if not isinstance(creators, list):
+                return (
+                    "Error: creators must be a list of dicts, e.g. "
+                    '[{"creatorType": "author", "firstName": "Ada", "lastName": "Lovelace"}]'
+                )
+            if not all(isinstance(c, dict) for c in creators):
+                return (
+                    "Error: creators must be a list of dicts, "
+                    "but one or more entries are not objects"
+                )
         if isinstance(tags, str):
             try:
                 tags = json.loads(tags)
