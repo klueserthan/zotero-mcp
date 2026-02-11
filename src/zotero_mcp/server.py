@@ -2183,6 +2183,12 @@ def create_item(
             except json.JSONDecodeError:
                 return f"Error: collections must be a JSON list, got: {collections}"
 
+        if collections is not None:
+            if not isinstance(collections, list) or not all(isinstance(c, str) for c in collections):
+                return (
+                    "Error: collections must be a list of strings (collection keys), "
+                    f"got: {collections}"
+                )
         if isinstance(extra_fields, str):
             try:
                 extra_fields = json.loads(extra_fields)
