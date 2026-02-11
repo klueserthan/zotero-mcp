@@ -421,6 +421,8 @@ class TestUpdateItem:
         )
 
         assert "Successfully updated" in result
+        # Verify template was fetched for validation
+        mock_zotero_client.item_template.assert_called_once_with("journalArticle")
         updated = mock_zotero_client.update_item.call_args[0][0]
         assert updated["data"]["volume"] == "99"
 
@@ -452,8 +454,8 @@ class TestUpdateItem:
             ctx=ctx,
         )
 
-        # Should warn about the unknown field
-        ctx.warn.assert_called()
+        # Should warn about the unknown field exactly once
+        ctx.warn.assert_called_once()
         warn_msg = ctx.warn.call_args[0][0]
         assert "nonexistentField" in warn_msg
         assert "not in the journalArticle template" in warn_msg
