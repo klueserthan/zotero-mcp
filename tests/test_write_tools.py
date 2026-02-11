@@ -457,7 +457,7 @@ class TestUpdateItem:
         warn_msg = ctx.warn.call_args[0][0]
         assert "nonexistentField" in warn_msg
         assert "not in the journalArticle template" in warn_msg
-        
+
         # Should apply the valid field
         updated = mock_zotero_client.update_item.call_args[0][0]
         assert updated["data"]["volume"] == "42"
