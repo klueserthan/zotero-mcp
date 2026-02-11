@@ -2159,11 +2159,27 @@ def create_item(
             except json.JSONDecodeError:
                 return f"Error: creators must be a JSON list of dicts, got: {creators}"
 
+        # Validate creators structure after parsing (or if passed as a Python object)
+        if creators is not None:
+            if not isinstance(creators, list):
+                return (
+                    "Error: creators must be a list of dicts, e.g. "
+                    '[{"creatorType": "author", "firstName": "Ada", "lastName": "Lovelace"}]'
+                )
+            if not all(isinstance(c, dict) for c in creators):
+                return (
+                    "Error: creators must be a list of dicts, "
+                    "but one or more entries are not objects"
+                )
         if isinstance(tags, str):
             try:
                 tags = json.loads(tags)
             except json.JSONDecodeError:
-                return f"Error: tags must be a JSON list, got: {tags}"
+                return f"Error: tags must be a JSON list of strings, got: {tags}"
+            if not isinstance(tags, list):
+                return f"Error: tags must be a JSON list of strings, got: {tags}"
+            if not all(isinstance(t, str) for t in tags):
+                return f"Error: all tags must be strings, got: {tags}"
 
         if isinstance(collections, str):
             try:
@@ -2171,11 +2187,24 @@ def create_item(
             except json.JSONDecodeError:
                 return f"Error: collections must be a JSON list, got: {collections}"
 
+        if collections is not None:
+            if not isinstance(collections, list) or not all(isinstance(c, str) for c in collections):
+                return (
+                    "Error: collections must be a list of strings (collection keys), "
+                    f"got: {collections}"
+                )
         if isinstance(extra_fields, str):
             try:
                 extra_fields = json.loads(extra_fields)
             except json.JSONDecodeError:
                 return f"Error: extra_fields must be a JSON dict, got: {extra_fields}"
+            if not isinstance(extra_fields, dict):
+                return f"Error: extra_fields must be a JSON dict (object), got: {extra_fields!r}"
+        elif extra_fields is not None and not isinstance(extra_fields, dict):
+            return (
+                f"Error: extra_fields must be a dict, "
+                f"got type: {type(extra_fields).__name__}"
+            )
 
         ctx.info(f"Creating {item_type} item: '{title}'")
         zot = get_zotero_client()
@@ -2298,6 +2327,30 @@ def update_item(
             except json.JSONDecodeError:
                 return f"Error: extra_fields must be a JSON dict, got: {extra_fields}"
 
+        # Validate parsed parameter shapes
+        if creators is not None:
+            if not isinstance(creators, list):
+                return (
+                    f"Error: creators must be a list of dicts, got type "
+                    f"{type(creators).__name__}: {creators}"
+                )
+            if any(not isinstance(c, dict) for c in creators):
+                return (
+                    "Error: each creator must be a JSON object (dict). "
+                    f"Got: {creators}"
+                )
+
+        if tags is not None and not isinstance(tags, list):
+            return (
+                f"Error: tags must be a list of tag values, got type "
+                f"{type(tags).__name__}: {tags}"
+            )
+
+        if extra_fields is not None and not isinstance(extra_fields, dict):
+            return (
+                f"Error: extra_fields must be a JSON object (dict), got type "
+                f"{type(extra_fields).__name__}: {extra_fields}"
+            )
         ctx.info(f"Updating item {item_key}")
         zot = get_zotero_client()
 

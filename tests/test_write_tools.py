@@ -404,6 +404,18 @@ class TestUpdateItem:
         assert "No item found" in result
 
     def test_parses_json_extra_fields(self, mock_zotero_client):
+        template = {
+            "itemType": "journalArticle",
+            "title": "",
+            "creators": [],
+            "tags": [],
+            "collections": [],
+            "date": "",
+            "abstractNote": "",
+            "url": "",
+            "DOI": "",
+            "volume": "",
+        }
         existing = _make_item()
         mock_zotero_client.item.return_value = existing
         # Mock the template to include 'volume' as a valid field
