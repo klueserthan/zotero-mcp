@@ -418,7 +418,12 @@ class TestUpdateItem:
         }
         existing = _make_item()
         mock_zotero_client.item.return_value = existing
-        mock_zotero_client.item_template.return_value = template.copy()
+        # Mock the template to include 'volume' as a valid field
+        mock_zotero_client.item_template.return_value = {
+            "itemType": "journalArticle",
+            "title": "",
+            "volume": "",
+        }
         ctx = _make_ctx()
 
         result = update_item(
@@ -428,6 +433,8 @@ class TestUpdateItem:
         )
 
         assert "Successfully updated" in result
+        # Verify template was fetched for validation
+        mock_zotero_client.item_template.assert_called_once_with("journalArticle")
         updated = mock_zotero_client.update_item.call_args[0][0]
         assert updated["data"]["volume"] == "99"
 
@@ -440,67 +447,36 @@ class TestUpdateItem:
         assert "Error" in result
         assert "Timeout" in result
 
-    def test_warns_on_unknown_extra_field(self, mock_zotero_client):
-        template = {
-            "itemType": "journalArticle",
-            "title": "",
-            "creators": [],
-            "tags": [],
-            "collections": [],
-            "date": "",
-            "abstractNote": "",
-            "url": "",
-            "DOI": "",
-        }
-        existing = _make_item(title="Test Item", item_type="journalArticle")
+    def test_warns_on_unknown_extra_fields(self, mock_zotero_client):
+        """Unknown extra_fields should trigger ctx.warn and be ignored."""
+        existing = _make_item(itemType="journalArticle")
         mock_zotero_client.item.return_value = existing
-        mock_zotero_client.item_template.return_value = template.copy()
-        ctx = _make_ctx()
-
-        result = update_item(
-            item_key="ABC12345",
-            extra_fields={"nonexistentField": "value"},
-            ctx=ctx,
-        )
-
-        assert "Successfully updated" in result
-        ctx.warn.assert_called()
-        # Verify the unknown field was not added to the item
-        updated = mock_zotero_client.update_item.call_args[0][0]
-        assert "nonexistentField" not in updated["data"]
-
-    def test_applies_valid_extra_fields(self, mock_zotero_client):
-        template = {
+        # Mock the template to have known fields
+        mock_zotero_client.item_template.return_value = {
             "itemType": "journalArticle",
             "title": "",
-            "creators": [],
-            "tags": [],
-            "collections": [],
-            "date": "",
-            "abstractNote": "",
-            "url": "",
-            "DOI": "",
-            "publicationTitle": "",
             "volume": "",
+            "publicationTitle": "",
         }
-        existing = _make_item(title="Test Item", item_type="journalArticle")
-        mock_zotero_client.item.return_value = existing
-        mock_zotero_client.item_template.return_value = template.copy()
         ctx = _make_ctx()
 
-        result = update_item(
+        update_item(
             item_key="ABC12345",
-            extra_fields={"publicationTitle": "Nature", "volume": "42"},
+            extra_fields={"volume": "42", "nonexistentField": "value"},
             ctx=ctx,
         )
 
-        assert "Successfully updated" in result
-        # Verify valid fields were applied
+        # Should warn about the unknown field exactly once
+        ctx.warn.assert_called_once()
+        warn_msg = ctx.warn.call_args[0][0]
+        assert "nonexistentField" in warn_msg
+        assert "not in the journalArticle template" in warn_msg
+
+        # Should apply the valid field
         updated = mock_zotero_client.update_item.call_args[0][0]
-        assert updated["data"]["publicationTitle"] == "Nature"
         assert updated["data"]["volume"] == "42"
-        # No warnings for valid fields
-        ctx.warn.assert_not_called()
+        # Should NOT apply the invalid field
+        assert "nonexistentField" not in updated["data"]
 
 
 # ===========================================================================
