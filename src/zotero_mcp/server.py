@@ -2378,8 +2378,25 @@ def update_item(
             data["DOI"] = doi
 
         if extra_fields and isinstance(extra_fields, dict):
+            # Fetch the item template to validate extra_fields
+            item_type = data.get("itemType")
+            if not item_type:
+                return "Error: Item has no itemType field"
+            
+            try:
+                template = zot.item_template(item_type)
+            except Exception as e:
+                return f"Error fetching template for item type '{item_type}': {str(e)}"
+            
+            # Only apply fields that exist in the template
             for field, value in extra_fields.items():
-                data[field] = value
+                if field in template:
+                    data[field] = value
+                else:
+                    ctx.warn(
+                        f"Field '{field}' is not in the {item_type} template "
+                        f"and will be ignored"
+                    )
 
         # Perform the update
         zot.update_item(item)

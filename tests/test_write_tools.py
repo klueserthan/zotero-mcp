@@ -404,8 +404,21 @@ class TestUpdateItem:
         assert "No item found" in result
 
     def test_parses_json_extra_fields(self, mock_zotero_client):
+        template = {
+            "itemType": "journalArticle",
+            "title": "",
+            "creators": [],
+            "tags": [],
+            "collections": [],
+            "date": "",
+            "abstractNote": "",
+            "url": "",
+            "DOI": "",
+            "volume": "",
+        }
         existing = _make_item()
         mock_zotero_client.item.return_value = existing
+        mock_zotero_client.item_template.return_value = template.copy()
         ctx = _make_ctx()
 
         result = update_item(
@@ -426,6 +439,68 @@ class TestUpdateItem:
 
         assert "Error" in result
         assert "Timeout" in result
+
+    def test_warns_on_unknown_extra_field(self, mock_zotero_client):
+        template = {
+            "itemType": "journalArticle",
+            "title": "",
+            "creators": [],
+            "tags": [],
+            "collections": [],
+            "date": "",
+            "abstractNote": "",
+            "url": "",
+            "DOI": "",
+        }
+        existing = _make_item(title="Test Item", item_type="journalArticle")
+        mock_zotero_client.item.return_value = existing
+        mock_zotero_client.item_template.return_value = template.copy()
+        ctx = _make_ctx()
+
+        result = update_item(
+            item_key="ABC12345",
+            extra_fields={"nonexistentField": "value"},
+            ctx=ctx,
+        )
+
+        assert "Successfully updated" in result
+        ctx.warn.assert_called()
+        # Verify the unknown field was not added to the item
+        updated = mock_zotero_client.update_item.call_args[0][0]
+        assert "nonexistentField" not in updated["data"]
+
+    def test_applies_valid_extra_fields(self, mock_zotero_client):
+        template = {
+            "itemType": "journalArticle",
+            "title": "",
+            "creators": [],
+            "tags": [],
+            "collections": [],
+            "date": "",
+            "abstractNote": "",
+            "url": "",
+            "DOI": "",
+            "publicationTitle": "",
+            "volume": "",
+        }
+        existing = _make_item(title="Test Item", item_type="journalArticle")
+        mock_zotero_client.item.return_value = existing
+        mock_zotero_client.item_template.return_value = template.copy()
+        ctx = _make_ctx()
+
+        result = update_item(
+            item_key="ABC12345",
+            extra_fields={"publicationTitle": "Nature", "volume": "42"},
+            ctx=ctx,
+        )
+
+        assert "Successfully updated" in result
+        # Verify valid fields were applied
+        updated = mock_zotero_client.update_item.call_args[0][0]
+        assert updated["data"]["publicationTitle"] == "Nature"
+        assert updated["data"]["volume"] == "42"
+        # No warnings for valid fields
+        ctx.warn.assert_not_called()
 
 
 # ===========================================================================
