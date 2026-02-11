@@ -2198,6 +2198,13 @@ def create_item(
                 extra_fields = json.loads(extra_fields)
             except json.JSONDecodeError:
                 return f"Error: extra_fields must be a JSON dict, got: {extra_fields}"
+            if not isinstance(extra_fields, dict):
+                return f"Error: extra_fields must be a JSON dict (object), got: {extra_fields!r}"
+        elif extra_fields is not None and not isinstance(extra_fields, dict):
+            return (
+                f"Error: extra_fields must be a dict, "
+                f"got type: {type(extra_fields).__name__}"
+            )
 
         ctx.info(f"Creating {item_type} item: '{title}'")
         zot = get_zotero_client()
