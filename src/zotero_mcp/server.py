@@ -2175,7 +2175,11 @@ def create_item(
             try:
                 tags = json.loads(tags)
             except json.JSONDecodeError:
-                return f"Error: tags must be a JSON list, got: {tags}"
+                return f"Error: tags must be a JSON list of strings, got: {tags}"
+            if not isinstance(tags, list):
+                return f"Error: tags must be a JSON list of strings, got: {tags}"
+            if not all(isinstance(t, str) for t in tags):
+                return f"Error: all tags must be strings, got: {tags}"
 
         if isinstance(collections, str):
             try:
