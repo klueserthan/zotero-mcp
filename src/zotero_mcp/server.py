@@ -2298,6 +2298,30 @@ def update_item(
             except json.JSONDecodeError:
                 return f"Error: extra_fields must be a JSON dict, got: {extra_fields}"
 
+        # Validate parsed parameter shapes
+        if creators is not None:
+            if not isinstance(creators, list):
+                return (
+                    f"Error: creators must be a list of dicts, got type "
+                    f"{type(creators).__name__}: {creators}"
+                )
+            if any(not isinstance(c, dict) for c in creators):
+                return (
+                    "Error: each creator must be a JSON object (dict). "
+                    f"Got: {creators}"
+                )
+
+        if tags is not None and not isinstance(tags, list):
+            return (
+                f"Error: tags must be a list of tag values, got type "
+                f"{type(tags).__name__}: {tags}"
+            )
+
+        if extra_fields is not None and not isinstance(extra_fields, dict):
+            return (
+                f"Error: extra_fields must be a JSON object (dict), got type "
+                f"{type(extra_fields).__name__}: {extra_fields}"
+            )
         ctx.info(f"Updating item {item_key}")
         zot = get_zotero_client()
 
